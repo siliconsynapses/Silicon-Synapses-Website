@@ -1,0 +1,327 @@
+// Silicon Synapses — Prisma schema
+// Postgres (Neon). Migrations use DIRECT_URL; the app uses the pooled DATABASE_URL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth & RBAC
+// ---------------------------------------------------------------------------
+
+/// Only staff/admins have accounts. Public participants never sign up — event
+/// registration captures their details without creating a User (see Registration).
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  STAFF
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  hashedPassword String
+  role           Role     @default(STAFF)
+  isActive       Boolean  @default(true)
+  lastLoginAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Audit relations
+  createdEvents  Event[]        @relation("EventCreatedBy")
+  checkIns       Registration[] @relation("CheckedInBy")
+  queryResponses Query[]        @relation("QueryRespondedBy")
+  auditLogs      AuditLog[]     @relation("AuditActor")
+
+  @@index([role])
+}
+
+/// Append-only trail of privileged actions, written server-side after every
+/// authorized mutation (publish, check-in, role change, …).
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action    String // e.g. "event.publish", "registration.checkin"
+  entity    String // e.g. "Event", "Registration"
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+/// Key/value store for club-editable site content (college name, hero copy,
+/// social links, stats). Lets the admin change copy without a deploy.
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Departments (domains) & Team
+// ---------------------------------------------------------------------------
+
+model Department {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  tagline     String
+  description String
+  icon        String // lucide icon name
+  accent      String // gradient token, e.g. "from-cyan-400/25 to-blue-500/10"
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events      Event[]
+  teamMembers TeamMember[]
+
+  @@index([isActive, order])
+}
+
+model TeamMember {
+  id           String      @id @default(cuid())
+  name         String
+  role         String // e.g. "President", "Lead — VLSI"
+  photoUrl     String?
+  bio          String?
+  email        String?
+  linkedinUrl  String?
+  githubUrl    String?
+  order        Int         @default(0)
+  isActive     Boolean     @default(true)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([isActive, order])
+  @@index([departmentId])
+}
+
+// ---------------------------------------------------------------------------
+// Events, Registration, Digital Pass & QR Attendance
+// ---------------------------------------------------------------------------
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum RegistrationStatus {
+  CONFIRMED
+  WAITLISTED
+  CANCELLED
+}
+
+model Event {
+  id                   String      @id @default(cuid())
+  slug                 String      @unique
+  title                String
+  summary              String
+  description          String
+  bannerUrl            String?
+  venue                String
+  startsAt             DateTime
+  endsAt               DateTime?
+  capacity             Int? // null = unlimited
+  status               EventStatus @default(DRAFT)
+  registrationOpensAt  DateTime?
+  registrationClosesAt DateTime?
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  createdById  String?
+  createdBy    User?       @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registrations Registration[]
+
+  @@index([status, startsAt])
+}
+
+model Registration {
+  id String @id @default(cuid())
+
+  /// Opaque, high-entropy token — the ONLY identifier placed in the pass URL /
+  /// QR code. Never encode participant name/email/phone in the QR. The
+  /// registration service overrides this default with a crypto-random value.
+  passToken String @unique @default(cuid())
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // Participant details — never exposed in any public URL or QR payload.
+  participantName  String
+  participantEmail String
+  participantPhone String?
+  extra            Json? // additional per-event form answers
+
+  status RegistrationStatus @default(CONFIRMED)
+
+  // Attendance (single check-in per registration, via QR scan at the door).
+  checkedInAt   DateTime?
+  checkedInById String?
+  checkedInBy   User?     @relation("CheckedInBy", fields: [checkedInById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, participantEmail]) // one registration per email per event
+  @@index([eventId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Learning Resource Hub: Branch → Semester → Subject → Category → Resource
+// ---------------------------------------------------------------------------
+
+enum ResourceType {
+  LINK
+  FILE
+  VIDEO
+  BOOK
+  NOTE
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String // e.g. "Electronics & Communication"
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subjects Subject[]
+
+  @@index([isActive, order])
+}
+
+model Subject {
+  id       String  @id @default(cuid())
+  name     String
+  code     String?
+  semester Int // 1..8
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  resources Resource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([branchId, semester, name])
+  @@index([branchId, semester])
+}
+
+/// Global, reusable buckets (Notes, PYQs, Reference Books, Video Lectures, …).
+model ResourceCategory {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resources Resource[]
+}
+
+model Resource {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  type        ResourceType @default(LINK)
+  url         String? // external link
+  fileKey     String? // object-storage key when uploaded (R2)
+  isPublished Boolean      @default(true)
+
+  subjectId  String
+  subject    Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   ResourceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subjectId, categoryId])
+  @@index([isPublished])
+}
+
+// ---------------------------------------------------------------------------
+// Magazine archive — "Newton's Apple"
+// ---------------------------------------------------------------------------
+
+model Magazine {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  issue       String // e.g. "Vol 1, Issue 2"
+  description String?
+  coverUrl    String?
+  fileKey     String? // stored PDF (R2)
+  fileUrl     String? // or external link
+  publishedAt DateTime?
+  isPublished Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isPublished, publishedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Query / Suggestion box
+// ---------------------------------------------------------------------------
+
+enum QueryType {
+  QUERY
+  SUGGESTION
+  FEEDBACK
+}
+
+enum QueryStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model Query {
+  id      String      @id @default(cuid())
+  type    QueryType   @default(QUERY)
+  name    String
+  email   String
+  subject String
+  message String
+  status  QueryStatus @default(OPEN)
+
+  response      String?
+  respondedById String?
+  respondedBy   User?     @relation("QueryRespondedBy", fields: [respondedById], references: [id], onDelete: SetNull)
+  respondedAt   DateTime?
+
+  ipHash String? // hashed source IP for rate-limiting / abuse triage (no raw IP)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
