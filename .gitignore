@@ -29,3 +29,14 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# Club-provided source assets — originals stay local; optimized copies are
+# committed under public/team. Never commit the raw folder or the roles file.
+/Core_team_photos
+/Core_Team_Roles.txt
+
+# Local credentials / notes — never commit secrets
+/Credentials.txt
+
+# Runtime uploads (dev local-disk storage driver; production uses R2)
+/public/uploads

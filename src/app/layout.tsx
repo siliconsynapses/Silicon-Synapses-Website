@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
 import { siteConfig } from "@/config/site";
+import { getSiteContent } from "@/lib/data/site-settings";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -16,14 +17,23 @@ const inter = Inter({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: `${siteConfig.name} — ECE Department Club`,
-    template: `%s · ${siteConfig.name}`,
-  },
-  description: siteConfig.description,
-  metadataBase: new URL(siteConfig.url),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  // Description is club-editable (Site content admin); title/URL stay fixed brand.
+  const content = await getSiteContent();
+  return {
+    title: {
+      default: `${siteConfig.name} — ECE Department Club`,
+      template: `%s · ${siteConfig.name}`,
+    },
+    description: content.description,
+    metadataBase: new URL(siteConfig.url),
+    icons: {
+      icon: "/brand/logo.png",
+      shortcut: "/brand/logo.png",
+      apple: "/brand/logo.png",
+    },
+  };
+}
 
 /**
  * Root layout: HTML shell, fonts, and global styles only. Shared page chrome

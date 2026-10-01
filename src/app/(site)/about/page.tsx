@@ -3,7 +3,7 @@ import { Compass, Rocket, Target } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { PageHero } from "@/components/ui/page-hero";
 import { ButtonLink } from "@/components/ui/button";
-import { clubStats, siteConfig } from "@/config/site";
+import { getSiteContent } from "@/lib/data/site-settings";
 
 export const metadata: Metadata = {
   title: "About",
@@ -11,13 +11,14 @@ export const metadata: Metadata = {
     "About Silicon Synapses — the student technology club of the ECE department.",
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const content = await getSiteContent();
   return (
     <>
       <PageHero
         badge="Who we are"
         title="About Silicon Synapses"
-        description={siteConfig.description}
+        description={content.description}
       />
 
       <section className="pb-8">
@@ -25,19 +26,23 @@ export default function AboutPage() {
           <div className="mx-auto max-w-3xl space-y-4 text-pretty leading-relaxed text-slate-300">
             <p>
               Silicon Synapses is the student technology club of the{" "}
-              {siteConfig.department}
-              {siteConfig.college !== "[College Name]"
-                ? ` at ${siteConfig.college}`
-                : ""}
-              . We bring together students across domains — from AI/ML and VLSI
-              to embedded systems, competitive programming, and web development —
-              to learn, build, and share.
+              {content.department}
+              {content.hasCollege ? ` at ${content.college}` : ""}. We bring
+              together students across domains — from AI/ML and VLSI to embedded
+              systems, competitive programming, and web development — to learn,
+              build, and share.
             </p>
-            <p className="text-slate-400">
-              <span className="text-slate-500">[CONTENT REQUIRED]</span> Add the
-              club&apos;s real story here: when it was founded, why it started,
-              key milestones, and what makes it distinct within the department.
-            </p>
+            {content.story ? (
+              <p className="whitespace-pre-line text-slate-300">
+                {content.story}
+              </p>
+            ) : (
+              <p className="text-slate-400">
+                <span className="text-slate-500">[CONTENT REQUIRED]</span> Add the
+                club&apos;s real story here: when it was founded, why it started,
+                key milestones, and what makes it distinct within the department.
+              </p>
+            )}
           </div>
         </Container>
       </section>
@@ -53,11 +58,17 @@ export default function AboutPage() {
               <h2 className="mt-4 font-display text-xl font-semibold text-white">
                 Our mission
               </h2>
-              <p className="mt-2 text-sm text-slate-400">
-                <span className="text-slate-500">[CONTENT REQUIRED]</span> State
-                the club&apos;s mission — the change it exists to create for its
-                members and the department.
-              </p>
+              {content.mission ? (
+                <p className="mt-2 whitespace-pre-line text-sm text-slate-300">
+                  {content.mission}
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-slate-400">
+                  <span className="text-slate-500">[CONTENT REQUIRED]</span> State
+                  the club&apos;s mission — the change it exists to create for its
+                  members and the department.
+                </p>
+              )}
             </div>
             <div className="rounded-2xl border border-white/10 bg-surface/40 p-7">
               <span className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-accent">
@@ -66,11 +77,17 @@ export default function AboutPage() {
               <h2 className="mt-4 font-display text-xl font-semibold text-white">
                 Our vision
               </h2>
-              <p className="mt-2 text-sm text-slate-400">
-                <span className="text-slate-500">[CONTENT REQUIRED]</span>{" "}
-                Describe where the club is headed and what it aspires to build
-                over the coming years.
-              </p>
+              {content.vision ? (
+                <p className="mt-2 whitespace-pre-line text-sm text-slate-300">
+                  {content.vision}
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-slate-400">
+                  <span className="text-slate-500">[CONTENT REQUIRED]</span>{" "}
+                  Describe where the club is headed and what it aspires to build
+                  over the coming years.
+                </p>
+              )}
             </div>
           </div>
         </Container>
@@ -80,7 +97,7 @@ export default function AboutPage() {
       <section className="py-12">
         <Container>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {clubStats.map((stat) => (
+            {content.stats.map((stat) => (
               <div
                 key={stat.label}
                 className="rounded-2xl border border-white/10 bg-surface/40 p-6 text-center"

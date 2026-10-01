@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { getEventBySlug } from "@/lib/data/events";
 import { formatEventDate, formatEventTime } from "@/lib/format";
+import { RegistrationForm } from "./registration-form";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,18 @@ export default async function EventDetailPage({ params }: PageProps) {
     event.capacity != null
       ? `${event.registrationCount} / ${event.capacity} registered`
       : null;
+
+  // Registration window — the public view; the server action re-checks all of
+  // this before writing, so it's the source of truth, not this.
+  const now = Date.now();
+  const isFull =
+    event.capacity != null && event.registrationCount >= event.capacity;
+  const notYetOpen =
+    event.registrationOpensAt != null &&
+    now < event.registrationOpensAt.getTime();
+  const registrationClosed =
+    event.registrationClosesAt != null &&
+    now > event.registrationClosesAt.getTime();
 
   return (
     <article className="pb-24">
@@ -150,9 +163,9 @@ export default async function EventDetailPage({ params }: PageProps) {
               </dl>
             </div>
 
-            {/* Registration — honest state, no non-functional button. The full
-                registration + digital pass + QR attendance flow lands in a later
-                phase; until then we don't render a fake "Register" action. */}
+            {/* Registration — live for open events (digital pass + QR check-in),
+                with honest messaging for cancelled / past / not-yet-open /
+                closed states. The server action re-verifies all of this. */}
             <div className="rounded-2xl border border-white/10 bg-surface/40 p-6">
               <div className="flex items-center gap-2 text-accent">
                 <Info size={16} />
@@ -170,21 +183,26 @@ export default async function EventDetailPage({ params }: PageProps) {
                   This event has already taken place. Browse upcoming events to
                   join the next one.
                 </p>
+              ) : notYetOpen ? (
+                <p className="mt-3 text-sm text-slate-400">
+                  Registration opens on{" "}
+                  <span className="text-slate-200">
+                    {formatEventDate(event.registrationOpensAt!)}
+                  </span>
+                  . Check back then to claim your digital pass.
+                </p>
+              ) : registrationClosed ? (
+                <p className="mt-3 text-sm text-slate-400">
+                  Registration for this event has closed. If you&apos;d still
+                  like to attend, reach out and we&apos;ll try to help.
+                </p>
               ) : (
                 <>
                   <p className="mt-3 text-sm text-slate-400">
-                    Online registration with a digital entry pass is coming soon
-                    and will open right here. In the meantime, reach out and
-                    we&apos;ll save you a spot.
+                    Register to get your digital entry pass — a QR code you show
+                    at the door for check-in.
                   </p>
-                  <ButtonLink
-                    href="/contact"
-                    variant="secondary"
-                    size="sm"
-                    className="mt-4 w-full"
-                  >
-                    Contact the team
-                  </ButtonLink>
+                  <RegistrationForm eventSlug={slug} isFull={isFull} />
                 </>
               )}
             </div>

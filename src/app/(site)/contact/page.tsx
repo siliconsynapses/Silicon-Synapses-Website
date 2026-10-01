@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Mail, MapPin, MessageSquareText } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { PageHero } from "@/components/ui/page-hero";
-import { siteConfig, socialLinks } from "@/config/site";
+import { socialLinks } from "@/config/site";
+import { getSiteContent } from "@/lib/data/site-settings";
 import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
@@ -11,7 +12,13 @@ export const metadata: Metadata = {
     "Get in touch with Silicon Synapses — ask a question, share a suggestion, or send feedback.",
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const content = await getSiteContent();
+  const hasRealEmail = content.email !== socialLinks.email;
+  const location = [content.hasCollege ? content.college : null, content.address]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <>
       <PageHero
@@ -37,15 +44,17 @@ export default function ContactPage() {
                     <div>
                       <p className="text-slate-500">Email</p>
                       <a
-                        href={`mailto:${socialLinks.email}`}
+                        href={`mailto:${content.email}`}
                         className="text-slate-200 transition-colors hover:text-accent"
                       >
-                        {socialLinks.email}
+                        {content.email}
                       </a>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        [CONTENT REQUIRED] Replace with the club&apos;s real
-                        email address.
-                      </p>
+                      {hasRealEmail ? null : (
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          [CONTENT REQUIRED] Replace with the club&apos;s real
+                          email address.
+                        </p>
+                      )}
                     </div>
                   </li>
                   <li className="flex gap-3">
@@ -54,11 +63,15 @@ export default function ContactPage() {
                     </span>
                     <div>
                       <p className="text-slate-500">Find us</p>
-                      <p className="text-slate-200">{siteConfig.department}</p>
-                      <p className="text-xs text-slate-500">
-                        {siteConfig.college} · [CONTENT REQUIRED] room / block
-                        &amp; address
-                      </p>
+                      <p className="text-slate-200">{content.department}</p>
+                      {location ? (
+                        <p className="text-xs text-slate-400">{location}</p>
+                      ) : (
+                        <p className="text-xs text-slate-500">
+                          [CONTENT REQUIRED] College name, room / block &amp;
+                          address
+                        </p>
+                      )}
                     </div>
                   </li>
                 </ul>

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Cpu, GraduationCap, Rocket, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
+import type { SiteContent } from "@/lib/data/site-settings";
 
 const pillars = [
   {
@@ -28,7 +29,7 @@ const pillars = [
   },
 ];
 
-export function About() {
+export function About({ content }: { content: SiteContent }) {
   return (
     <section id="about" className="relative py-24">
       <Container>
@@ -43,18 +44,26 @@ export function About() {
             <h2 className="mt-5 font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Where electronics meets <span className="text-accent">innovation</span>
             </h2>
-            <p className="mt-5 text-slate-400">
-              <span className="text-slate-500">[DEMO CONTENT]</span> Silicon
-              Synapses is the official technology club of the Department of
-              Electronics &amp; Communication Engineering. We bring together
-              students across AI/ML, VLSI, embedded systems, competitive
-              programming, and web development to learn, build, and lead.
-            </p>
-            <p className="mt-4 text-slate-400">
-              <span className="text-slate-500">[CONTENT REQUIRED]</span> — replace
-              with the club&apos;s real history, mission, and vision once
-              provided.
-            </p>
+            {content.story ? (
+              <p className="mt-5 whitespace-pre-line text-slate-400">
+                {content.story}
+              </p>
+            ) : (
+              <>
+                <p className="mt-5 text-slate-400">
+                  <span className="text-slate-500">[DEMO CONTENT]</span> Silicon
+                  Synapses is the official technology club of the Department of
+                  Electronics &amp; Communication Engineering. We bring together
+                  students across AI/ML, VLSI, embedded systems, competitive
+                  programming, and web development to learn, build, and lead.
+                </p>
+                <p className="mt-4 text-slate-400">
+                  <span className="text-slate-500">[CONTENT REQUIRED]</span> —
+                  replace with the club&apos;s real history, mission, and vision
+                  once provided.
+                </p>
+              </>
+            )}
           </motion.div>
 
           <div className="grid gap-4 sm:grid-cols-2">

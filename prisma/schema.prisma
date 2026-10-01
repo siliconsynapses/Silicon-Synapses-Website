@@ -180,11 +180,16 @@ model Registration {
   checkedInById String?
   checkedInBy   User?     @relation("CheckedInBy", fields: [checkedInById], references: [id], onDelete: SetNull)
 
+  /// Hashed source IP (never the raw address) for a per-IP registration rate
+  /// limit and abuse triage. Mirrors Query.ipHash.
+  ipHash String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([eventId, participantEmail]) // one registration per email per event
   @@index([eventId, status])
+  @@index([ipHash, createdAt])
 }
 
 // ---------------------------------------------------------------------------

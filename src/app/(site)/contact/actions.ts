@@ -1,8 +1,7 @@
 "use server";
 
-import { createHash } from "node:crypto";
-import { headers } from "next/headers";
 import { db } from "@/lib/db";
+import { hashIp } from "@/lib/request-ip";
 import { querySchema } from "@/lib/validations/query";
 
 type FieldName = "type" | "name" | "email" | "subject" | "message";
@@ -88,22 +87,5 @@ export async function submitQuery(
       message:
         "We couldn't submit your message right now. Please try again later, or email us directly.",
     };
-  }
-}
-
-/**
- * Hash the requester IP with a secret salt. We store only the hash (never the
- * raw IP) so basic rate limiting works without holding personal data.
- */
-async function hashIp(): Promise<string | null> {
-  try {
-    const h = await headers();
-    const forwarded = h.get("x-forwarded-for");
-    const ip = forwarded?.split(",")[0]?.trim() || h.get("x-real-ip") || "";
-    if (!ip) return null;
-    const salt = process.env.AUTH_SECRET ?? "silicon-synapses";
-    return createHash("sha256").update(`${salt}:${ip}`).digest("hex");
-  } catch {
-    return null;
   }
 }

@@ -1,21 +1,25 @@
 /**
  * Idempotent database seed.
  *
- * Safe to run repeatedly (uses upserts). It seeds only structural/demo data:
+ * Safe to run repeatedly (uses upserts / create-if-absent). It seeds:
  *   - Resource categories (structural taxonomy)
  *   - Departments (from src/config/site.ts)
- *   - A demo learning branch + subjects           [DEMO CONTENT]
- *   - A demo magazine issue and event (unpublished) [DEMO CONTENT]
+ *   - The real team roster (from prisma/team-roster.ts; create-if-absent)
+ *   - A demo learning branch + subjects              [DEMO CONTENT]
+ *   - A demo magazine issue and event (unpublished)  [DEMO CONTENT]
  *   - The first SUPER_ADMIN — ONLY from env vars; never fabricated.
  *
- * Real club content (events, team, magazines, resources) is entered through
- * the admin dashboard, not hardcoded here.
+ * Real club content (events, magazines, resources) is entered through the admin
+ * dashboard. The team roster is the exception: the club provided the real names,
+ * roles, and photos, so seedTeam() imports them (create-if-absent) from
+ * prisma/team-roster.ts, with photos committed under public/team.
  *
  * Run with:  npm run db:seed
  */
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { departmentsPreview } from "../src/config/site";
+import { teamRoster } from "./team-roster";
 
 const db = new PrismaClient();
 
@@ -63,6 +67,40 @@ async function seedDepartments() {
     });
   }
   console.log(`✔ Departments (${departmentsPreview.length})`);
+}
+
+async function seedTeam() {
+  // Real club roster (names, roles, photos) provided by the club. Photos are
+  // committed as optimized static assets under public/team (produced by
+  // scripts/optimize-team-photos.mts). Non-destructive: create-if-absent by name
+  // so admin edits and additions survive re-seeds.
+  const departments = await db.department.findMany({
+    select: { id: true, slug: true },
+  });
+  const deptIdBySlug = new Map(departments.map((d) => [d.slug, d.id]));
+
+  let created = 0;
+  for (const [index, member] of teamRoster.entries()) {
+    const existing = await db.teamMember.findFirst({ where: { name: member.name } });
+    if (existing) continue;
+
+    await db.teamMember.create({
+      data: {
+        name: member.name,
+        role: member.role,
+        photoUrl: `/team/${member.slug}.jpg`,
+        departmentId: member.departmentSlug
+          ? deptIdBySlug.get(member.departmentSlug) ?? null
+          : null,
+        order: index,
+        isActive: true,
+      },
+    });
+    created += 1;
+  }
+  console.log(
+    `✔ Team roster (${created} created, ${teamRoster.length - created} already present)`,
+  );
 }
 
 async function seedDemoLearning() {
@@ -174,6 +212,7 @@ async function main() {
   console.log("→ Seeding database…");
   await seedResourceCategories();
   await seedDepartments();
+  await seedTeam();
   await seedDemoLearning();
   await seedDemoContent();
   await seedSuperAdmin();

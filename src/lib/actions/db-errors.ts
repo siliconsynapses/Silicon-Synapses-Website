@@ -25,3 +25,14 @@ export function isRecordNotFound(error: unknown): boolean {
     error.code === "P2025"
   );
 }
+
+/**
+ * True when the error is a Prisma foreign-key constraint violation (P2003) —
+ * e.g. deleting a row another table still references under onDelete: Restrict.
+ */
+export function isForeignKeyConstraint(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2003"
+  );
+}

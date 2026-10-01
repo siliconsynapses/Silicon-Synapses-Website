@@ -8,17 +8,12 @@ import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navItems } from "@/config/site";
 import { ButtonLink } from "@/components/ui/button";
+import { BrandLogo } from "@/components/layout/logo";
 
 function Wordmark() {
   return (
-    <Link href="/" className="flex items-center gap-2.5">
-      {/* [ASSET REQUIRED] logo placeholder — replaced with the provided logo */}
-      <span className="grid h-9 w-9 place-items-center rounded-lg bg-linear-to-br from-accent to-accent-3 text-sm font-bold text-ink shadow-[0_0_20px_-4px_rgba(34,211,238,0.7)]">
-        SS
-      </span>
-      <span className="font-display text-lg font-semibold tracking-tight text-white">
-        Silicon <span className="text-accent">Synapses</span>
-      </span>
+    <Link href="/" aria-label="Silicon Synapses — home">
+      <BrandLogo size={36} priority />
     </Link>
   );
 }

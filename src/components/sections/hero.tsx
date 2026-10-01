@@ -5,9 +5,9 @@ import { ArrowRight, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import { clubStats, siteConfig } from "@/config/site";
+import type { SiteContent } from "@/lib/data/site-settings";
 
-export function Hero() {
+export function Hero({ content }: { content: SiteContent }) {
   const reduce = useReducedMotion();
   const rise = (delay: number) => ({
     initial: reduce ? false : { opacity: 0, y: 20 },
@@ -44,8 +44,8 @@ export function Hero() {
           {...rise(0.12)}
           className="mt-6 max-w-2xl text-lg text-slate-300 sm:text-xl"
         >
-          {siteConfig.tagline}.{" "}
-          <span className="text-slate-400">{siteConfig.description}</span>
+          {content.tagline}.{" "}
+          <span className="text-slate-400">{content.description}</span>
         </motion.p>
 
         <motion.div
@@ -64,7 +64,7 @@ export function Hero() {
           {...rise(0.24)}
           className="mt-16 grid w-full max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4"
         >
-          {clubStats.map((s) => (
+          {content.stats.map((s) => (
             <div
               key={s.label}
               className="rounded-2xl border border-white/10 bg-white/[0.02] p-4"

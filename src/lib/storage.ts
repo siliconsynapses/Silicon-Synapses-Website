@@ -16,6 +16,9 @@ const base = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, "") ?? "";
 export function publicFileUrl(fileKey: string | null | undefined): string | null {
   if (!fileKey) return null;
   if (/^https?:\/\//i.test(fileKey)) return fileKey;
+  // Root-relative public assets: uploaded files (/uploads/…) and committed
+  // static assets (e.g. team photos at /team/…) are served as-is.
+  if (fileKey.startsWith("/")) return fileKey;
   if (!base) return null;
   return `${base}/${fileKey.replace(/^\/+/, "")}`;
 }
